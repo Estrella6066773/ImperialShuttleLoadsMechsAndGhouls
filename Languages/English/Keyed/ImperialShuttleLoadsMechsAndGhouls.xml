@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 装载界面里机械族与亚人的分区标题。原版的分区条件比放行条件更窄，这两类单位在原版分区里看不见，因此另开分区。 -->
+  <ShuttleCargoMechsSection>Mechanoids (unoverseen)</ShuttleCargoMechsSection>
+  <ShuttleCargoSubhumansSection>Ghouls (subhumans)</ShuttleCargoSubhumansSection>
+
+  <!-- 穿梭机为了等本单位登机而延迟起飞时的一次性提示。{0} 为还在往机舱里走的单位名单。 -->
+  <ShuttleCargoBoardingHold>The shuttle is waiting for {0} to board before it departs.</ShuttleCargoBoardingHold>
+
+  <!-- ===== Settings: launch mode ===== -->
+  <ShuttleCargoLaunchSection>Quest shuttle launch</ShuttleCargoLaunchSection>
+  <ShuttleCargoLaunchDesc>Decides when the shuttles sent by Royalty quests leave the map. Changes take effect immediately; a flight already under way is not affected.</ShuttleCargoLaunchDesc>
+  <ShuttleCargoManualLaunch>Quest shuttles wait for a manual launch</ShuttleCargoManualLaunch>
+  <ShuttleCargoManualLaunchTip>When enabled, a quest shuttle no longer flies away just because every colonist the quest asked for is aboard. Instead it waits for you to press Launch, exactly like a permit shuttle.\n\nWhy this is needed: the vanilla "ready to leave" check only counts the colonists the quest asked for. It knows nothing about the mechanoids and ghouls this mod lets aboard, so the shuttle would take off while they were still walking to the hatch.\n\nThe Launch button appears in the shuttle's own button bar. It is greyed out while the colonist requirement is unmet, with the missing number spelled out.\n\nWhen disabled, vanilla behaviour returns: the shuttle departs as soon as the required things are loaded, and this mod still waits up to six hours for units that are still boarding. The quest's own countdown and its "leave if one of these units is lost" rules always apply unchanged.</ShuttleCargoManualLaunchTip>
+
+  <!-- ===== Settings: colonist limit ===== -->
+  <ShuttleCargoLimitSection>Quest shuttle passenger limits</ShuttleCargoLimitSection>
+  <ShuttleCargoLimitDesc>Quest shuttles specify a minimum and maximum number of colonists. These four options decide which units count towards those numbers. The limits themselves come from the quest; this mod only changes who fills the quota.</ShuttleCargoLimitDesc>
+  <ShuttleCargoLimitMechs>Mechanoids count towards the passenger limit</ShuttleCargoLimitMechs>
+  <ShuttleCargoLimitMechsTip>When checked, your mechanoids take up slots in the passenger limit like colonists do. Leave it unchecked and they can come along without using a slot (default).\n\nEither way, the number of colonists the quest requires is unchanged.</ShuttleCargoLimitMechsTip>
+  <ShuttleCargoLimitSubhumans>Subhumans count towards the passenger limit</ShuttleCargoLimitSubhumans>
+  <ShuttleCargoLimitSubhumansTip>When checked, your subhumans (the ghoul mutants) take up slots in the passenger limit like colonists do. Leave it unchecked and they can come along without using a slot (default).</ShuttleCargoLimitSubhumansTip>
+  <ShuttleCargoLimitSlaves>Slaves count towards the passenger limit</ShuttleCargoLimitSlaves>
+  <ShuttleCargoLimitSlavesTip>When checked, slaves take up slots in the passenger limit, as in vanilla (default). Uncheck to let them come along without using a slot.</ShuttleCargoLimitSlavesTip>
+  <ShuttleCargoLimitPrisoners>Prisoners count towards the passenger limit</ShuttleCargoLimitPrisoners>
+  <ShuttleCargoLimitPrisonersTip>When checked, prisoners take up slots in the passenger limit, as in vanilla (default). Uncheck to let them come along without using a slot.</ShuttleCargoLimitPrisonersTip>
+  <ShuttleCargoLimitNote>Note: these options only affect the passenger limit. The specific people and items a quest requires, reachability, and mass are all judged exactly as in vanilla.</ShuttleCargoLimitNote>
+  <ShuttleCargoReset>Restore defaults</ShuttleCargoReset>
+
+  <!-- ===== Launch button on the shuttle ===== -->
+  <ShuttleCargoNoRequiredColonists>Cannot launch: the quest requires at least {0} colonists aboard, and there are currently {1}.</ShuttleCargoNoRequiredColonists>
+  <ShuttleCargoSendShuttleBoarding>{0} unit(s) are assigned to the shuttle but have not boarded yet: {1}. Launching now will leave them behind.</ShuttleCargoSendShuttleBoarding>
+</LanguageData>

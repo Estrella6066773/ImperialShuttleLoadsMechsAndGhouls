@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patch>
+  <!--
+    让帝国穿梭机的装载界面显示载重条，与原版其它装载界面一致。
+
+    原版为了精简界面，在 Shuttle 的 CompProperties_Transporter 上把 showOverallStats 设成了 false，
+    于是 Dialog_LoadTransporters.DoWindowContents 里「质量 / 上限」那一段统计条被整段跳过，
+    玩家看不到已经装了多少、还剩多少。这里把这一项改回 true，统计条的内容、颜色与超载闪烁全部沿用原版绘制。
+
+    注意：
+    1. 只影响使用 Shuttle 这个 ThingDef 的穿梭机，也就是王权任务飞来的穿梭机与许可呼叫的穿梭机；
+       Odyssey 的玩家自有穿梭机是另外的 ThingDef，不受影响。
+    2. 任务穿梭机的质量口径保持原版：任务要求的那批殖民者只计装备与随身物品，不计自身体重，
+       因此这里显示的载重与超载判定用的数字完全一致。
+  -->
+  <Operation Class="PatchOperationReplace">
+    <xpath>Defs/ThingDef[defName="Shuttle"]/comps/li[@Class="CompProperties_Transporter"]/showOverallStats</xpath>
+    <value>
+      <showOverallStats>true</showOverallStats>
+    </value>
+  </Operation>
+</Patch>

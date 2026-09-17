@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <!-- 装载界面里机械族与亚人的分区标题。原版分区只收「已受监督的机械族」与「能随队的亚人」，食尸鬼与自主机械族因此另开分区。 -->
+  <ShuttleCargoMechsSection>机械族（未受监督）</ShuttleCargoMechsSection>
+  <ShuttleCargoSubhumansSection>亚人（食尸鬼）</ShuttleCargoSubhumansSection>
+
+  <!-- 穿梭机为了等本单位登机而延迟起飞时的一次性提示。{0} 为还在往机舱里走的单位名单。 -->
+  <ShuttleCargoBoardingHold>穿梭机正在等 {0} 登机，装载完成后才会起飞。</ShuttleCargoBoardingHold>
+
+  <!-- ===== 设置窗口：起飞方式 ===== -->
+  <ShuttleCargoLaunchSection>任务穿梭机的起飞方式</ShuttleCargoLaunchSection>
+  <ShuttleCargoLaunchDesc>决定王权任务飞来的穿梭机什么时候离开地图。设置改完立刻生效，已经起飞的航班不受影响。</ShuttleCargoLaunchDesc>
+  <ShuttleCargoManualLaunch>任务穿梭机改为手动起飞</ShuttleCargoManualLaunch>
+  <ShuttleCargoManualLaunchTip>开启后，穿梭机不会再因为「任务要的殖民者都进舱了」而自动飞走，而是像许可穿梭机一样等玩家点「起飞」。\n\n为什么需要这样：原版判断「可以起飞」时只数任务要的殖民者，不看随机登机的机械族与食尸鬼，因此随行单位还在往机舱走的时候穿梭机就会离开。\n\n起飞按钮就在穿梭机自己的按钮栏里。殖民者数量不够时按钮会变灰，并写明还差几个人。\n\n关闭后恢复原版行为：装载齐了立即起飞；本模组仍会在随行单位没进舱前最多多等六小时。任务自己带的倒计时与「必需单位出事就走」的规则始终照旧。</ShuttleCargoManualLaunchTip>
+
+  <!-- ===== 设置窗口：人数上限 ===== -->
+  <ShuttleCargoLimitSection>任务穿梭机的人数上限</ShuttleCargoLimitSection>
+  <ShuttleCargoLimitDesc>任务穿梭机会规定「至少 / 最多带几名殖民者」。下面四项决定哪些单位算进这个人数。上限本身由任务决定，本模组只改「谁来填这个数字」。</ShuttleCargoLimitDesc>
+  <ShuttleCargoLimitMechs>机械族计入人数上限</ShuttleCargoLimitMechs>
+  <ShuttleCargoLimitMechsTip>勾选后，玩家阵营的机械族会像殖民者一样占人数上限名额；不勾选则可以随行而不占名额（默认）。\n\n无论勾不勾，都不会改变任务要求上机的殖民者人数。</ShuttleCargoLimitMechsTip>
+  <ShuttleCargoLimitSubhumans>亚人计入人数上限</ShuttleCargoLimitSubhumans>
+  <ShuttleCargoLimitSubhumansTip>勾选后，玩家阵营的亚人（食尸鬼系列）会像殖民者一样占人数上限名额；不勾选则可以随行而不占名额（默认）。</ShuttleCargoLimitSubhumansTip>
+  <ShuttleCargoLimitSlaves>奴隶计入人数上限</ShuttleCargoLimitSlaves>
+  <ShuttleCargoLimitSlavesTip>勾选后，奴隶与原版一致地占人数上限名额（默认）。取消勾选可以让他们随行而不占名额。</ShuttleCargoLimitSlavesTip>
+  <ShuttleCargoLimitPrisoners>囚犯计入人数上限</ShuttleCargoLimitPrisoners>
+  <ShuttleCargoLimitPrisonersTip>勾选后，囚犯与原版一致地占人数上限名额（默认）。取消勾选可以让他们随行而不占名额。</ShuttleCargoLimitPrisonersTip>
+  <ShuttleCargoLimitNote>注意：这些开关只管人数上限。任务指定的具体人员与物品、单位的可达性与载重，一律照原版判定，不受影响。</ShuttleCargoLimitNote>
+  <ShuttleCargoReset>恢复默认设置</ShuttleCargoReset>
+
+  <!-- ===== 穿梭机起飞按钮 ===== -->
+  <ShuttleCargoNoRequiredColonists>无法起飞：任务要求机上至少有 {0} 名殖民者，目前只有 {1} 名。</ShuttleCargoNoRequiredColonists>
+  <ShuttleCargoSendShuttleBoarding>还有 {0} 个单位已被指派上机但还没进舱：{1}。现在起飞会把它们留在地图上。</ShuttleCargoSendShuttleBoarding>
+</LanguageData>

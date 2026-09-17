@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>帝国穿梭机可装载机械族与食尸鬼</name>
+  <author>Estrella6066</author>
+  <packageId>Estrella6066.imperialShuttleLoadsMechsAndGhouls</packageId>
+  <modVersion>1.1.0</modVersion>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+  <description>让王权资料片任务里飞来的帝国穿梭机可以装载机械族与己方食尸鬼（亚人突变体），并把起飞时机交给玩家。共四项改动：
+
+1. 放行登机。原版这些穿梭机由任务脚本按「只收殖民者」配置，所以装载界面里看不到机械族与食尸鬼，右键让它们「进入穿梭机」也会被拒绝。本模组放开这一处判定，并补上自动登机与装载界面分区。
+2. 装载界面显示载重。任务穿梭机的质量与上限条原本被关闭，现在与其他装载界面一致。
+3. 手动起飞。原版只要任务要的殖民者全部进舱就立刻起飞，完全不看随行的机械族与食尸鬼走到哪了。本模组改为像许可穿梭机一样等玩家点「起飞」，殖民者人数不够时按钮变灰并写明还差几人（可在设置里关掉，回到原版自动起飞）。
+4. 两项设置。起飞方式与「哪些单位计入人数上限」（机械族、亚人、奴隶、囚犯可分别设定）。
+
+其余判定（许可呼叫的穿梭机、携带质量上限、任务要求的人员与物品、任务自带的倒计时）都保持原样。
+
+需要 Harmony。仅在启用王权资料片时生效；机械族需要生物科技资料片，食尸鬼需要异象资料片。
+</description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+  </loadAfter>
+</ModMetaData>
