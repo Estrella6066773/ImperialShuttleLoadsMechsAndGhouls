@@ -51,6 +51,31 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     }
 
     /// <summary>
+    /// 解除载重限制：挂钩 Dialog_LoadTransporters.MassCapacity。
+    ///
+    /// 联动关系：统计条、行内停止点、CheckForErrors 的超载判定都读 MassCapacity。
+    /// 设置关闭载重限制时，把上限抬到极大，界面仍显示实际已装质量，但不再因超载拒绝。
+    /// 只作用于玩家远征用任务穿梭机。
+    /// </summary>
+    [HarmonyPatch(typeof(Dialog_LoadTransporters), "get_MassCapacity")]
+    internal static class Patch_LoadDialogMassCapacity
+    {
+        [HarmonyPostfix]
+        private static void Postfix(Dialog_LoadTransporters __instance, ref float __result)
+        {
+            if (CargoPolicy.MassLimitEnforced)
+            {
+                return;
+            }
+            if (LoadDialogAccess.QuestShuttleOf(__instance) == null)
+            {
+                return;
+            }
+            __result = float.MaxValue;
+        }
+    }
+
+    /// <summary>
     /// 补正值的计算，供 Patch_LoadDialogMassUsage 调用。
     ///
     /// 注意：本类不改变任何原版状态，只读界面当前的候选清单与穿梭机的任务要求。

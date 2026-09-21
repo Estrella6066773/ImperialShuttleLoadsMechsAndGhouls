@@ -15,11 +15,13 @@
   <ShuttleCargoManualLaunch>任务穿梭机改为手动起飞</ShuttleCargoManualLaunch>
   <ShuttleCargoManualLaunchTip>开启后，穿梭机不会再因为「任务要的殖民者都进舱了」而自动飞走，而是像许可穿梭机一样等玩家点「起飞」。\n\n为什么需要这样：原版判断「可以起飞」时只数任务要的殖民者，不看随机登机的机械族与食尸鬼，因此随行单位还在往机舱走的时候穿梭机就会离开。\n\n起飞按钮就在穿梭机自己的按钮栏里。殖民者数量不够时按钮会变灰，并写明还差几个人。穿梭机停在地图上但还没有船务的时候（例如「古代遗迹」任务落地后），本模组同样会补一颗起飞按钮，按下后请任务重新检查装载、按任务自己的安排起飞。\n\n关闭后恢复原版行为：装载齐了立即起飞；本模组仍会在随行单位没进舱前最多多等六小时。任务自己带的倒计时与「必需单位出事就走」的规则始终照旧。</ShuttleCargoManualLaunchTip>
 
-  <!-- ===== 设置窗口：人数上限 ===== -->
-  <ShuttleCargoLimitSection>任务穿梭机的人数限制</ShuttleCargoLimitSection>
-  <ShuttleCargoLimitDesc>这里只管一种穿梭机：任务点名要你带自己的殖民者上机的那种（也算本模组其它功能的作用范围）。任务给你规定了「至少 / 最多带几名殖民者」，下面几项决定哪些单位算进这个人数。\n\n款待任务那类「使节、劳工在你殖民地暂住一段时间后由穿梭机接走」的航班不在此列：那些任务的撤离时机与人数由任务自己安排，本模组一概不插手。</ShuttleCargoLimitDesc>
+  <!-- ===== 设置窗口：人数与载重限制 ===== -->
+  <ShuttleCargoLimitSection>任务穿梭机的人数与载重限制</ShuttleCargoLimitSection>
+  <ShuttleCargoLimitDesc>这里只管一种穿梭机：任务点名要你带自己的殖民者上机的那种。载重限制与人数限制可以分别关闭。\n\n返程（在任务地图上装载回家）时，囚犯自动不占名额，方便带回俘虏。随行殖民者阵亡后，起飞所需人数会按尚存自由殖民者封顶，不会因为凑不齐原先写死的人数而永远飞不走。\n\n款待任务那类「使节、劳工在你殖民地暂住一段时间后由穿梭机接走」的航班不在此列。</ShuttleCargoLimitDesc>
+  <ShuttleCargoMassLimitEnabled>按载重限制拦货</ShuttleCargoMassLimitEnabled>
+  <ShuttleCargoMassLimitEnabledTip>关闭后，装载界面不再因为超载而拒绝装载。载重条仍显示实际已装质量，但上限视为无限。\n\n只影响任务交给你装载的远征穿梭机；许可穿梭机与玩家自有穿梭机不受影响。</ShuttleCargoMassLimitEnabledTip>
   <ShuttleCargoLimitEnabled>按人数限制拦人</ShuttleCargoLimitEnabled>
-  <ShuttleCargoLimitEnabledTip>关闭后，本模组不再因为人数不对而拦人：装载界面按原版口径计数，右键进舱不数人头，起飞按钮也不会因为多带或少带几个占名额的人而变灰。下面四项随之失效。\n\n什么时候该关：你只是想让机械族、食尸鬼随行，却不想被「任务要求的人数」牵着走的时候。任务自己的硬性要求不受这里影响——任务点名的必需人员与物品没上齐时，起飞按钮仍旧是灰的（那是任务对剧情的要求，本模组不替它放行）。</ShuttleCargoLimitEnabledTip>
+  <ShuttleCargoLimitEnabledTip>关闭后，本模组不再因为人数不对而拦人：装载界面连原版「只允许 N 名殖民者」一并放过，右键进舱不数人头，起飞按钮也不会因为多带或少带几个占名额的人而变灰。下面四项随之失效。\n\n任务自己的硬性要求不受影响——任务点名的必需人员与物品没上齐时，起飞按钮仍旧是灰的。</ShuttleCargoLimitEnabledTip>
   <ShuttleCargoLimitMechs>机械族计入人数</ShuttleCargoLimitMechs>
   <ShuttleCargoLimitMechsTip>勾选后，玩家阵营的机械族会像殖民者一样占人数名额；不勾选则可以随行而不占名额（默认）。\n\n无论勾不勾，都不会改变任务要求上机的殖民者人数。</ShuttleCargoLimitMechsTip>
   <ShuttleCargoLimitSubhumans>亚人计入人数</ShuttleCargoLimitSubhumans>
@@ -27,8 +29,8 @@
   <ShuttleCargoLimitSlaves>奴隶计入人数</ShuttleCargoLimitSlaves>
   <ShuttleCargoLimitSlavesTip>勾选后，奴隶与原版一致地占人数名额（默认）。取消勾选可以让他们随行而不占名额。</ShuttleCargoLimitSlavesTip>
   <ShuttleCargoLimitPrisoners>囚犯计入人数</ShuttleCargoLimitPrisoners>
-  <ShuttleCargoLimitPrisonersTip>勾选后，囚犯与原版一致地占人数名额（默认）。取消勾选可以让他们随行而不占名额。</ShuttleCargoLimitPrisonersTip>
-  <ShuttleCargoLimitNote>注意：这些开关只管人数。任务指定的具体人员与物品、单位的可达性与载重，一律照原版判定，不受影响。</ShuttleCargoLimitNote>
+  <ShuttleCargoLimitPrisonersTip>勾选后，囚犯在去程时与原版一致地占人数名额（默认）。取消勾选可以让他们随行而不占名额。\n\n返程时装载的囚犯始终不占名额，不受此开关影响。</ShuttleCargoLimitPrisonersTip>
+  <ShuttleCargoLimitNote>注意：任务指定的具体人员与物品、单位的可达性，一律照原版判定。返程多带囚犯、阵亡后封顶人数，是本模组固定行为，不另开开关。</ShuttleCargoLimitNote>
   <ShuttleCargoLimitOffNote>（人数限制已关闭，四类单位的计入设置暂停生效；重新勾选「按人数限制拦人」后按原设置继续生效。）</ShuttleCargoLimitOffNote>
   <ShuttleCargoReset>恢复默认设置</ShuttleCargoReset>
 

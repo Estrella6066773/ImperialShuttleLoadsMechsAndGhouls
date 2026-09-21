@@ -181,20 +181,11 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         }
 
         /// <summary>
-        /// 设置里「任务穿梭机的人数限制」总开关是否打开。
+        /// 设置里「按人数限制拦人」总开关是否打开。
         ///
-        /// 联动关系（谁会来问这里）：
-        ///   CargoPolicy.BoardingLimit         -> 上限为 0，装载与起飞两处因此都不再数人头
-        ///   Patch_CheckForErrors              -> 关闭时不做「按设置收窄名单」这一步
-        ///   ManualLaunch.RefuseReason          -> 关闭时不再因为人多或人少而禁用起飞按钮
-        ///
-        /// 关闭后的效果就是「本模组不碰人数」：装载界面按原版口径判断，右键进舱不数人头，
-        ///   起飞按钮不会因为机上有几个占名额的人而变灰。
-        /// 但任务自己的硬性要求不受影响：任务点名的必需人员与物品没到齐时，
-        ///   AllRequiredThingsLoaded 仍为假，原版那套「缺东西就飞不了」照旧生效——
-        ///   那是任务对剧情的安排，本模组不替它放行。
-        ///
-        /// 注意：设置对象取不到时返回 false（当作关闭），也就是退回「不介入」，绝不因设置文件损坏而改变玩法。
+        /// 联动关系：BoardingLimit / Patch_CheckForErrors / ManualLaunch.RefuseReason。
+        /// 关闭后连原版「只允许 N 名殖民者」也会放过；任务点名的必需人员与物品仍须齐备。
+        /// 设置对象取不到时返回 false（当作关闭）。
         /// </summary>
         public static bool LimitEnforced
         {
@@ -206,25 +197,34 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         }
 
         /// <summary>
-        /// 该单位是否要被算进任务穿梭机的「人数上限」。
-        ///
-        /// 联动关系（谁会来问这里）：
-        ///   Dialog_LoadTransporters.CheckForErrors -> 点确定时的人数上限检查，见 Patch_CountLimit
-        ///   CompShuttle.IsAllowedNow               -> 右键让单位进舱时的上限检查，见 Patch_CountLimit
-        ///   CargoPolicy.QuotaAboard                -> 起飞按钮判断「多带了人」时的计数
-        ///
-        /// 语义：返回 true 表示「占名额」，也就是在这几处检查里与其他殖民者一样计数。
-        ///   机械族与亚人默认返回 false，于是可以随行而不挤占任务要的人数；
-        ///   奴隶（原版 IsColonist 对奴隶为真）与囚犯默认返回 true，与原版口径一致；
-        ///   其余单位（自由的殖民者、动物等）一律返回 true，本模组不碰。
-        ///
-        /// 注意：
-        /// 1. 每次现读设置，玩家改完设置立即生效；设置对象取不到时一律返回 true，退回原版口径。
-        /// 2. 这里只回答「算不算名额」。要不要用名额拦人另看 LimitEnforced——
-        ///    总开关关闭时上面三处都会直接跳过，本方法不会被问到。
-        /// 3. 这里不判断「能不能上机」。能否登机由 CompShuttle.IsAllowed 决定（本模组另有放行补丁）。
-        /// 4. 一个单位若同时属于多类（例如被奴役的亚人），按「机械族 -> 亚人 -> 奴隶 -> 囚犯」的顺序取第一个匹配项，
-        ///    也就是优先听从本模组自己那两类设置。
+        /// 设置里「按载重限制拦货」是否打开。关闭后装载界面 MassCapacity 视为无限。
+        /// 设置对象取不到时返回 true，保持原版载重判定。
+        /// </summary>
+        public static bool MassLimitEnforced
+        {
+            get
+            {
+                ImperialShuttleLoadsSettings settings = ImperialShuttleLoadsMod.Settings;
+                return settings == null || settings.enforceMassLimit;
+            }
+        }
+
+        /// <summary>
+        /// 是否正在任务地图上装载返程：玩家远征穿梭机且当前地图不是玩家家园。
+        /// 返程时囚犯不占名额，便于带回俘虏。
+        /// </summary>
+        public static bool IsReturnLoading(CompShuttle shuttle)
+        {
+            if (!IsPlayerExpeditionShuttle(shuttle) || shuttle.parent == null)
+            {
+                return false;
+            }
+            Map map = shuttle.parent.Map;
+            return map != null && !map.IsPlayerHome;
+        }
+
+        /// <summary>
+        /// 该单位是否占人数名额（无穿梭机上下文）。返程囚犯请用带 shuttle 的重载。
         /// </summary>
         public static bool CountsTowardShuttleLimit(Pawn pawn)
         {
@@ -235,7 +235,6 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             ImperialShuttleLoadsSettings settings = ImperialShuttleLoadsMod.Settings;
             if (settings == null || !settings.enforcePassengerLimit)
             {
-                // 总开关关闭（或设置读不到）：一律返回「占名额」，等于原版口径，本模组的区分不生效。
                 return true;
             }
             if (IsPlayerMech(pawn))
@@ -257,17 +256,17 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return true;
         }
 
-        /// <summary>
-        /// 该单位是不是「玩家自己这边的人」，也就是会被算进名额的对象。
-        ///
-        /// 联动关系：QuotaAboard / CountEnteringQuotaPawns 都先问这一句，
-        /// 于是起飞按钮与右键进舱的名额判定只统计玩家要带的人。
-        ///
-        /// 为什么还要这一层：任务穿梭机经常自带乘客（王权使团、帝国卫队、任务要押送的囚犯），
-        /// 他们既不是玩家带的人、也不会因为名额被清出机舱，若把他们也数进名额，
-        /// 一台本该装满 8 名殖民者的穿梭机会因为机上坐着 3 个帝国兵而永远「超员」、永远无法起飞。
-        /// 所以名额只算：玩家阵营的单位、以及殖民地自己的奴隶与囚犯。
-        /// </summary>
+        /// <summary>同上，带穿梭机上下文：返程时囚犯不占名额。</summary>
+        public static bool CountsTowardShuttleLimit(Pawn pawn, CompShuttle shuttle)
+        {
+            if (pawn != null && pawn.IsPrisoner && !pawn.IsSlave && IsReturnLoading(shuttle))
+            {
+                return false;
+            }
+            return CountsTowardShuttleLimit(pawn);
+        }
+
+        /// <summary>是否为玩家这边要带的人（名额只统计这些）。</summary>
         public static bool BelongsToPlayerSide(Pawn pawn)
         {
             if (pawn == null)
@@ -277,23 +276,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return pawn.Faction == Faction.OfPlayer || pawn.IsSlaveOfColony || pawn.IsPrisonerOfColony;
         }
 
-        /// <summary>
-        /// 机上最多允许有几个占名额的单位：装载与起飞都用这个数当上限；0 表示不设上限。
-        ///
-        /// 联动关系：
-        ///   Patch_CompShuttle_IsAllowedNow -> 右键进舱时按它拦人；
-        ///   ManualLaunch.RefuseReason      -> 起飞按钮按它判断「多带了人」。
-        ///
-        /// 总开关（LimitEnforced）关闭时直接返回 0：上两处都会因为「没有上限」而完全不介入，
-        ///   于是玩家可以随意多带少带，起飞按钮也不会因为人数不正确而变灰。
-        ///
-        /// 开启时取 QuotaSlots 与 RequiredColonistCount 里的较大者，理由是一个必须避开的死锁：
-        ///   有任务同时要求「所有殖民者都上机」与一个较小的人数名额（例如任务生成时殖民者 8 人、
-        ///   之后殖民地多出生或收留了几口人）。这时任务要的人数会变成「全部殖民者」，
-        ///   若上限还是按名额的 8 算，玩家既被拦住装不下最后几个人，又因为要求没达满而不能起飞，
-        ///   这台穿梭机就永远走不了。取较大者保证「任务要求的那几个人一定有位置」，
-        ///   超员判定因此永远只在名额确实比任务要求更宽、而玩家又多塞了人的时候才生效。
-        /// </summary>
+        /// <summary>机上最多允许几个占名额单位；0 表示不设上限。</summary>
         public static int BoardingLimit(CompShuttle shuttle)
         {
             if (!LimitEnforced)
@@ -305,20 +288,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return required > slots ? required : slots;
         }
 
-        /// <summary>
-        /// 任务给这台穿梭机留出的「占名额人数」上限；任务没设名额时返回 0，表示不设限。
-        ///
-        /// 联动关系（谁会来问这里）：
-        ///   CargoPolicy.BoardingLimit  -> 先用这里的数字与任务要求取大者，才是最终上限
-        ///   CargoPolicy.QuotaAboard / CountEnteringQuotaPawns -> 都用它作为比较的基准
-        ///
-        /// 数字怎么来：任务给穿梭机的「人数」有两个字段——
-        ///   requiredColonistCount：任务点名要带的殖民者数量，装载界面就是拿它拦人的；
-        ///   maxColonistCount：任务允许的上限，原版只在右键进舱时用，绝大多数任务留空（-1）。
-        /// 两个都设了的时候取较小的那个：装载界面看的是前一个，右键看的是后一个，
-        /// 取小值等于「两边谁更严就按谁算」，玩家在装载界面看到的报错数字因此与实际拦人的口径一致。
-        /// 两个都没设（都不大于 0）时返回 0：这台穿梭机没有名额概念，一切照原版。
-        /// </summary>
+        /// <summary>任务给的占名额上限；未设时返回 0。</summary>
         public static int QuotaSlots(CompShuttle shuttle)
         {
             if (shuttle == null)
@@ -337,13 +307,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return slots;
         }
 
-        /// <summary>
-        /// 机舱里此刻占名额的单位数；可排除一个正在判定的对象（通常是正打算进舱的那一个）。
-        ///
-        /// 为什么只数单位不数物品：名额说的是「几个人」，货物按载重另算（Dialog_LoadTransporters.CheckForErrors 分开判）。
-        /// 两类被跳过：不占名额的类别（默认设置下的机械族与亚人），以及不属于玩家这一边的单位
-        /// （任务自带的帝国乘客等，见 BelongsToPlayerSide），后者与装载界面「勾选时谁被一起数进去」口径一致。
-        /// </summary>
+        /// <summary>机舱里此刻占名额的单位数。</summary>
         public static int QuotaAboard(CompShuttle shuttle, Thing excluded = null)
         {
             ThingOwner container = shuttle?.Transporter?.innerContainer;
@@ -359,7 +323,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 {
                     continue;
                 }
-                if (BelongsToPlayerSide(pawn) && CountsTowardShuttleLimit(pawn))
+                if (BelongsToPlayerSide(pawn) && CountsTowardShuttleLimit(pawn, shuttle))
                 {
                     num++;
                 }
@@ -367,13 +331,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return num;
         }
 
-        /// <summary>
-        /// 全图上正在往这台穿梭机里走、且占名额的单位数（不含 excluded 自己）。
-        ///
-        /// 口径照抄原版 CompShuttle.IsAllowedNow 的中段：遍历全图单位，它自己的当前工作与排队工作里
-        /// 凡是「进入这台穿梭机」的都算一条，同一单位有多条排队就多算——与其它模组的预期保持一致。
-        /// 差别只在两处跳过：不占名额的类别，以及不属于玩家这一边的单位（理由见 QuotaAboard）。
-        /// </summary>
+        /// <summary>全图正在往这台穿梭机走、且占名额的单位数。</summary>
         public static int CountEnteringQuotaPawns(Thing shuttleThing, Thing excluded = null)
         {
             Map map = shuttleThing?.Map;
@@ -381,6 +339,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 return 0;
             }
+            CompShuttle shuttle = shuttleThing.TryGetComp<CompShuttle>();
             int num = 0;
             List<Pawn> allPawns = map.mapPawns.AllPawns;
             for (int i = 0; i < allPawns.Count; i++)
@@ -390,7 +349,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 {
                     continue;
                 }
-                if (!BelongsToPlayerSide(pawn) || !CountsTowardShuttleLimit(pawn))
+                if (!BelongsToPlayerSide(pawn) || !CountsTowardShuttleLimit(pawn, shuttle))
                 {
                     continue;
                 }
@@ -418,28 +377,37 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 && job.GetTarget(TargetIndex.A).Thing == shuttleThing;
         }
 
-        /// <summary>是否有任何一类单位被排除在上限之外；全为「计入」时补丁可以完全不介入。</summary>
+        /// <summary>设置里是否有类别被排除在上限外。</summary>
         public static bool AnyCategoryLeftOutOfLimit()
         {
             ImperialShuttleLoadsSettings settings = ImperialShuttleLoadsMod.Settings;
             return settings != null && settings.AnythingLeftOutOfLimit;
         }
 
-        /// <summary>
-        /// 是否可以把该单位拉进「装载并登机」领主。
-        /// 与原版 TransporterUtility.MakeLordsAsAppropriate 对殖民者的口径一致：倒在地上的、不在图上的不收。
-        /// </summary>
+        /// <summary>名单里是否有人不占名额（含返程囚犯）。</summary>
+        public static bool AnyPawnLeftOutOfLimit(List<Pawn> pawns, CompShuttle shuttle)
+        {
+            if (pawns == null)
+            {
+                return false;
+            }
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                if (!CountsTowardShuttleLimit(pawns[i], shuttle))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>是否可拉进装载领主。</summary>
         public static bool CanJoinLoadingLord(Pawn pawn)
         {
             return IsOurCargo(pawn) && !pawn.Downed && pawn.Spawned;
         }
 
-        /// <summary>
-        /// 该单位是否还在地图上、且正在等着走进这台穿梭机。
-        /// 用于「起飞前等待装载完成」：只有真正走得过去、还没进舱的单位才会让穿梭机多等一会儿，
-        /// 已经进舱（已不在图上）、已倒地、已死亡、被墙围住的单位一律不再计入，
-        /// 这样任何异常情况都不会把穿梭机永久扣在地图上。
-        /// </summary>
+        /// <summary>单位是否还在地图上往这台穿梭机走。</summary>
         public static bool IsStillBoarding(Pawn pawn, Thing shuttle)
         {
             if (!IsStillBoardingInGeneral(pawn, shuttle))
@@ -449,10 +417,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return pawn.CanReach(shuttle, PathEndMode.Touch, Danger.Deadly);
         }
 
-        /// <summary>
-        /// IsStillBoarding 的低成本版本：只查状态，不做寻路。
-        /// 供装载工具提示一类「会被频繁重算」的场合使用，避免每帧对每个单位跑一次寻路。
-        /// </summary>
+        /// <summary>IsStillBoarding 的低成本版本，不做寻路。</summary>
         public static bool IsStillBoardingInGeneral(Pawn pawn, Thing shuttle)
         {
             if (!IsOurCargo(pawn) || !CanBoardOnFoot(pawn) || !pawn.Spawned)
@@ -466,7 +431,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             return true;
         }
 
-        /// <summary>机舱里已有的自由殖民者数量，口径与原版 CompShuttle 内部的人数统计一致。</summary>
+        /// <summary>机舱里已有的自由殖民者数量。</summary>
         public static int ColonistsAboard(CompShuttle shuttle)
         {
             ThingOwner container = shuttle?.Transporter?.innerContainer;
@@ -486,9 +451,32 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         }
 
         /// <summary>
-        /// 这台穿梭机此刻要求机舱里至少有多少名自由殖民者，口径照抄原版 AllRequiredThingsLoaded：
-        ///   任务指定的人数（requiredColonistCount）与「地图上所有自由殖民者」两者取大者。
-        /// requireAllColonistsOnMap 为真时，后者还包括子地图（口袋地图）里的殖民者。
+        /// 尚存可用的自由殖民者：已在机舱 + 地图与口袋地图上尚未登机的。
+        /// 随行殖民者阵亡后下降，用来给任务要求人数封顶。
+        /// </summary>
+        public static int AvailableFreeColonists(CompShuttle shuttle)
+        {
+            int num = ColonistsAboard(shuttle);
+            if (shuttle?.parent == null)
+            {
+                return num;
+            }
+            Map map = shuttle.parent.Map;
+            if (map == null)
+            {
+                return num;
+            }
+            num += map.mapPawns.FreeColonistsCount;
+            foreach (Map pocket in map.ChildPocketMaps)
+            {
+                num += pocket.mapPawns.FreeColonistsCount;
+            }
+            return num;
+        }
+
+        /// <summary>
+        /// 此刻要求机上至少有多少名自由殖民者。
+        /// 在原版口径上与尚存可用人数取小，避免途中阵亡后永远凑不齐。
         /// </summary>
         public static int RequiredColonistCount(CompShuttle shuttle)
         {
@@ -497,30 +485,28 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 return 0;
             }
             int required = shuttle.requiredColonistCount;
-            if (!shuttle.requireAllColonistsOnMap || shuttle.parent == null)
+            if (shuttle.requireAllColonistsOnMap && shuttle.parent != null)
             {
-                return required;
+                Map map = shuttle.parent.Map;
+                if (map != null)
+                {
+                    int onMap = map.mapPawns.FreeColonistsCount;
+                    foreach (Map pocket in map.ChildPocketMaps)
+                    {
+                        onMap += pocket.mapPawns.FreeColonistsCount;
+                    }
+                    onMap += ColonistsAboard(shuttle);
+                    if (onMap > required)
+                    {
+                        required = onMap;
+                    }
+                }
             }
-            Map map = shuttle.parent.Map;
-            if (map == null)
-            {
-                return required;
-            }
-            int onMap = map.mapPawns.FreeColonistsCount;
-            foreach (Map pocket in map.ChildPocketMaps)
-            {
-                onMap += pocket.mapPawns.FreeColonistsCount;
-            }
-            return onMap > required ? onMap : required;
+            int available = AvailableFreeColonists(shuttle);
+            return available < required ? available : required;
         }
 
-        /// <summary>
-        /// 把「已被指派上机、但还没进舱」的本模组货物收集到 outPawns。
-        ///
-        /// 数据来源是 CompTransporter.leftToLoad（玩家在装载界面点确定后由原版写入的待装载清单），
-        /// 而不是界面传进来的临时名单：前者更贴近「订单」，也不会被别人改动过的参数影响。
-        /// 进舱的单位会被原版从 leftToLoad 里移除，所以这里读到的天然就是「还没上机」的那批。
-        /// </summary>
+        /// <summary>收集已被指派上机但还没进舱的本模组货物。</summary>
         public static void CollectAssignedCargo(List<CompTransporter> transporters, Func<Pawn, bool> filter, List<Pawn> outPawns)
         {
             outPawns.Clear();
