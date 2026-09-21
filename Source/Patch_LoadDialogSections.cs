@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -28,8 +26,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 1. 分区为空就不加，避免 TransferableOneWayWidget 在计算滚动高度时给空标题留出多余空白。
     /// 2. 只对任务穿梭机生效：组建远征队界面（Dialog_FormCaravan）用的是同一个 AddPawnsSections，
     ///    分组补丁挂在装载界面的私有方法上，不会波及远征队，机械族与亚人在远征队里依旧按原版规则显示。
-    /// 3. pawnsTransfer / transferables / transporters 都是界面的私有字段，原版没有公开入口，只能反射取用；
-    ///    字段一旦改名，这里会只报一次错误并跳过，不会把装载界面拖垮。
+    /// 3. transferables / pawnsTransfer 都是界面的私有字段，读取方式集中在 LoadDialogAccess，
+    ///    字段改名时那边会报一次错误并跳过，不会把装载界面拖垮。
     /// </summary>
     [HarmonyPatch(typeof(Dialog_LoadTransporters), "CalculateAndRecacheTransferables")]
     internal static class Patch_LoadDialogSections
@@ -37,54 +35,20 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         [HarmonyPostfix]
         private static void Postfix(Dialog_LoadTransporters __instance)
         {
-            LoadDialogSections.TryAddCargoSections(__instance);
+            TryAddCargoSections(__instance);
         }
-    }
 
-    /// <summary>
-    /// 装载界面私有字段的读取与分区补写，供 Patch_LoadDialogSections 调用。
-    ///
-    /// 联动关系：本类不改变任何原版状态，只往界面组件里追加两个分区；
-    /// 分区的行内容由原版 TransferableOneWayWidget.DoRow 绘制，勾选结果照常写回 TransferableOneWay，
-    /// 因此「勾了几个」「质量够不够」这些计算全部沿用原版逻辑。
-    ///
-    /// 注意：
-    /// 1. 三个字段名与 1.6 原版一致；改版后若失效，日志里会出现一次中文报错，功能退化为「界面不显示这两类单位」，
-    ///    此时放行补丁仍然有效（右键让单位进入穿梭机依旧可行）。
-    /// 2. 读取到的 transferables 是界面当前的候选清单，本类只读不改，不持有其引用。
-    /// </summary>
-    internal static class LoadDialogSections
-    {
-        private static FieldInfo widgetField;
-        private static FieldInfo transferablesField;
-        private static FieldInfo transportersField;
-        private static bool missingFieldReported;
-
-        public static void TryAddCargoSections(Dialog_LoadTransporters dialog)
+        private static void TryAddCargoSections(Dialog_LoadTransporters dialog)
         {
             if (dialog == null)
             {
                 return;
             }
-            EnsureFields();
-            if (widgetField == null || transferablesField == null || transportersField == null)
-            {
-                if (!missingFieldReported)
-                {
-                    missingFieldReported = true;
-                    Log.Error("[帝国穿梭机可装载机械族与食尸鬼] 装载界面 Dialog_LoadTransporters 上找不到 pawnsTransfer / transferables / transporters 字段，界面里不会显示机械族与亚人的分区。游戏更新后字段改名时会出现此提示。");
-                }
-                return;
-            }
-            List<CompTransporter> transporters = transportersField.GetValue(dialog) as List<CompTransporter>;
-            List<TransferableOneWay> transferables = transferablesField.GetValue(dialog) as List<TransferableOneWay>;
-            TransferableOneWayWidget widget = widgetField.GetValue(dialog) as TransferableOneWayWidget;
-            if (transporters == null || transferables == null || widget == null || transporters.Count == 0)
-            {
-                return;
-            }
-            CompShuttle shuttle = transporters[0].parent.TryGetComp<CompShuttle>();
-            if (!CargoPolicy.IsQuestShuttle(shuttle))
+            List<CompTransporter> transporters = LoadDialogAccess.TransportersOf(dialog);
+            List<TransferableOneWay> transferables = LoadDialogAccess.TransferablesOf(dialog);
+            TransferableOneWayWidget widget = LoadDialogAccess.WidgetOf(dialog);
+            CompShuttle shuttle = LoadDialogAccess.QuestShuttleOf(dialog);
+            if (transporters == null || transferables == null || widget == null || transporters.Count == 0 || shuttle == null)
             {
                 return;
             }
@@ -119,25 +83,6 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             if (subhumans != null)
             {
                 widget.AddSection("ShuttleCargoSubhumansSection".Translate(), subhumans);
-            }
-        }
-
-        private static void EnsureFields()
-        {
-            if (widgetField != null && transferablesField != null && transportersField != null)
-            {
-                return;
-            }
-            Type type = typeof(Dialog_LoadTransporters);
-            try
-            {
-                widgetField = AccessTools.Field(type, "pawnsTransfer");
-                transferablesField = AccessTools.Field(type, "transferables");
-                transportersField = AccessTools.Field(type, "transporters");
-            }
-            catch (Exception ex)
-            {
-                Log.Error("[帝国穿梭机可装载机械族与食尸鬼] 读取装载界面私有字段时出错：" + ex);
             }
         }
     }

@@ -10,8 +10,10 @@
     注意：
     1. 只影响使用 Shuttle 这个 ThingDef 的穿梭机，也就是王权任务飞来的穿梭机与许可呼叫的穿梭机；
        Odyssey 的玩家自有穿梭机是另外的 ThingDef，不受影响。
-    2. 任务穿梭机的质量口径保持原版：任务要求的那批殖民者只计装备与随身物品，不计自身体重，
-       因此这里显示的载重与超载判定用的数字完全一致。
+    2. 统计条的数字与超载判定用的是同一份数字（Dialog_LoadTransporters.MassUsage）。
+       原版对任务穿梭机只把单位按「装备 + 随身物」计重，机械族、亚人、奴隶、囚犯、动物的自身体重被漏算，
+       装载界面补丁 Patch_LoadDialogMassUsage 会把漏掉的那部分补回去；
+       任务点名要带的自由殖民者与人员物品仍旧按原版只计装备与随身物，避免任务要求被载重卡死。
   -->
   <Operation Class="PatchOperationReplace">
     <xpath>Defs/ThingDef[defName="Shuttle"]/comps/li[@Class="CompProperties_Transporter"]/showOverallStats</xpath>

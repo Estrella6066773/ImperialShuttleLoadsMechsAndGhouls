@@ -15,7 +15,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     ///   ManualLaunch（玩家点起飞）      -> 点击时把 ManualSendInProgress 置位，这里必须立刻放行
     ///
     /// 判定成立必须同时满足四点：
-    ///   1. 是任务穿梭机（许可穿梭机与玩家自有穿梭机不归本模组管）；
+    ///   1. 是「玩家殖民者远征」的任务穿梭机（CargoPolicy.IsPlayerExpeditionShuttle）——
+    ///      款待任务那类「来接走暂住客人」的穿梭机撤离时机由任务自己安排，本模组一律不插手；
     ///   2. 装载流程已经启动，也就是玩家点过装载界面的确定；
     ///   3. 任务要的东西都已经在机舱里（AllRequiredThingsLoaded）——这一条用来回避「紧急起飞」：
     ///      任务用 sendAwayIfAnyDespawnedDownedOrDead 之类的规则让穿梭机提前离场时，此条必然不成立，
@@ -147,7 +148,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         private static void Collect(CompShuttle shuttle, List<Pawn> outPawns, bool requiringReachability)
         {
             outPawns.Clear();
-            if (shuttle == null || shuttle.parent == null || !CargoPolicy.IsQuestShuttle(shuttle))
+            if (shuttle == null || shuttle.parent == null || !CargoPolicy.IsPlayerExpeditionShuttle(shuttle))
             {
                 return;
             }

@@ -25,6 +25,9 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 2. 放行前要求单位走得动（CanBoardOnFoot），倒地、发狂、无法移动的一律不放行——
     ///    这也保证了「起飞前等装载完成」不会被一个永远走不到的单位卡死。
     /// 3. 不区分属性「只收健康单位」：被放行的单位已经过了同一套健康判定。
+    /// 4. 只放行到「玩家殖民者远征」的任务穿梭机（CargoPolicy.IsPlayerExpeditionShuttle）：
+    ///    款待任务、派工许可这类「来接走暂住客人」的穿梭机不在本模组范围内，
+    ///    免得玩家把机械族塞进一趟本该只运送别人家单位的航班。
     /// </summary>
     [HarmonyPatch(typeof(CompShuttle), nameof(CompShuttle.IsAllowed))]
     internal static class Patch_CompShuttle_IsAllowed
@@ -36,7 +39,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 return;
             }
-            if (!CargoPolicy.IsQuestShuttle(__instance))
+            if (!CargoPolicy.IsPlayerExpeditionShuttle(__instance))
             {
                 return;
             }

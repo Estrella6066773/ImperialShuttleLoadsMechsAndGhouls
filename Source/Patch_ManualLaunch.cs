@@ -28,7 +28,9 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     ///   之后由 Patch_ShipJob_Wait_GetJobGizmos 补上起飞按钮，起飞时机交给玩家。
     ///
     /// 注意：
-    /// 1. 只影响任务穿梭机（许可穿梭机本来就带自己的发射按钮，玩家自有穿梭机不归本模组管）。
+    /// 1. 只影响「玩家殖民者远征」的任务穿梭机（CargoPolicy.IsPlayerExpeditionShuttle）：
+    ///    许可穿梭机本来就带自己的发射按钮，玩家自有穿梭机不归本模组管，
+    ///    款待任务那类来接走暂住客人的穿梭机则由任务自己安排撤离时机。
     /// 2. 只接管「按钮可见」的船务（ManualLaunch.AppliesTo 里的 showGizmos 一条）：
     ///    加冕典礼的穿梭机把按钮整条藏起来，离开时机由任务脚本安排，本模组不去碰它。
     /// 3. 只拦「装齐就飞」这一条；任务用倒计时（ShipJob_WaitTime）或信号送走穿梭机时不经过这里，照旧执行。
@@ -84,9 +86,10 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 注意：
     /// 1. 按钮的显示与否沿用原版那套开关：调用的 CompShuttle 先看 TransportShip.ShowGizmos（也就是本条船务的
     ///    showGizmos），判定里再确认一次，两边口径一致。
-    /// 2. 按钮的禁用理由按原版口径分两种：殖民者不够（本模组新增的说明）与其它必需人员物品没到齐（原版原文）。
+    /// 2. 按钮的禁用理由按原版口径分三种：机上多带了占名额的人、任务要的殖民者不够（本模组新增的说明）、
+    ///    其它必需人员物品没到齐（原版原文）。
     /// 3. 按钮说明里会列出「已指派但还没进舱」的单位数量与名字，让玩家在按下之前知道会落下谁。
-    /// 4. 按钮只在 AllRequiredThingsLoaded 时才可按下，因此按下后原版 SendLaunchedSignals 依然会发出
+    /// 4. 按钮只在人数正确且 AllRequiredThingsLoaded 时才可按下，因此按下后原版 SendLaunchedSignals 依然会发出
     ///    SentSatisfied 信号，任务对自己的倒计时照旧被解除，任务节奏不被改。
     /// </summary>
     [HarmonyPatch(typeof(ShipJob_Wait), nameof(ShipJob_Wait.GetJobGizmos))]
@@ -143,7 +146,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         ///   3. 船务的按钮是显示的（showGizmos）——这一点是硬条件：王权加冕典礼的穿梭机
         ///      用 showGizmos: false 把按钮整条藏掉，它离开的时机完全由任务脚本安排，
         ///      静音它的自动起飞只会让皇家一行人困在一条永远不走的船上，因此必须放过；
-        ///   4. 是任务穿梭机（许可穿梭机本来就有原版的发射组按钮，玩家自有穿梭机由资料片自己管）。
+        ///   4. 是「玩家殖民者远征」的任务穿梭机（CargoPolicy.IsPlayerExpeditionShuttle）——
+        ///      款待任务那类来接走暂住客人的穿梭机撤离时机由任务自己安排，本模组不接管。
         /// </summary>
         public static bool AppliesTo(ShipJob_Wait job)
         {
@@ -155,7 +159,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 return false;
             }
-            return CargoPolicy.IsQuestShuttle(job.transportShip?.ShuttleComp);
+            return CargoPolicy.IsPlayerExpeditionShuttle(job.transportShip?.ShuttleComp);
         }
 
         /// <summary>
@@ -208,6 +212,17 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                     SendAway(job);
                 }
             };
+            ApplyReadinessNote(command, shuttle);
+            return command;
+        }
+
+        /// <summary>
+        /// 把「现在起飞还缺什么」写进按钮：缺什么就变灰并写明理由，可以起飞时按钮保持可点。
+        /// 等待类船务那颗按钮（本类）与「没有船务时补的」那颗按钮（QuestShuttleControls）共用这一套口径，
+        /// 玩家在两处看到的禁用理由与提示文字因此完全一致。
+        /// </summary>
+        public static void ApplyReadinessNote(Command_Action command, CompShuttle shuttle)
+        {
             string reason = RefuseReason(shuttle);
             if (!reason.NullOrEmpty())
             {
@@ -218,25 +233,44 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 command.defaultDescPostfix = note;
             }
-            return command;
         }
 
         /// <summary>
         /// 现在还不能起飞的理由；可以起飞时返回 null。
         ///
-        /// 先看殖民者：这是任务对「谁必须上机」的硬性要求，缺了就不是「少点什么」而是没人能开船，
-        /// 因此单独给一条说明，让玩家一眼看出还差几个人。
-        /// 再看原版的 AllRequiredThingsLoaded：任务指定的具体人员与物品没到齐时沿用原版提示。
+        /// 三条，按玩家最可能遇到的顺序排：
+        ///   1. 机上多带了占名额的人（例如右键塞进去的额外殖民者、奴隶、囚犯）——任务只允许带 N 个，
+        ///      多带就飞不了，先卸载掉多余的再起飞。这条是本模组新增的：原版对「多带」不设防，
+        ///      只有装载界面会拦，右键进舱那条路能一直塞，起飞后任务还会把它当成「多带了几个人」；
+        ///      统计口径与装载界面一致（不占名额的类别跳过，任务自带的乘客跳过，见 CargoPolicy.QuotaAboard）；
+        ///   2. 任务要的殖民者还没上齐：这是任务对「谁必须上机」的硬性要求，缺了就不是「少点什么」而是没人能开船，
+        ///      因此单独给一条说明，让玩家一眼看出还差几个人；
+        ///   3. 原版的 AllRequiredThingsLoaded：任务指定的具体人员与物品没到齐时沿用原版提示。
+        ///
+        /// 前两条受设置里「任务穿梭机的人数限制」总开关控制：关掉后本模组不再因为人多人少禁用起飞按钮，
+        ///   只有第 3 条——任务自己的「必须带齐」要求——照旧生效（那是任务对剧情的安排，本模组不替它放行）。
         /// </summary>
         private static string RefuseReason(CompShuttle shuttle)
         {
-            int required = CargoPolicy.RequiredColonistCount(shuttle);
-            if (required > 0)
+            if (CargoPolicy.LimitEnforced)
             {
-                int aboard = CargoPolicy.ColonistsAboard(shuttle);
-                if (aboard < required)
+                int slots = CargoPolicy.BoardingLimit(shuttle);
+                if (slots > 0)
                 {
-                    return "ShuttleCargoNoRequiredColonists".Translate(required, aboard);
+                    int counted = CargoPolicy.QuotaAboard(shuttle);
+                    if (counted > slots)
+                    {
+                        return "ShuttleCargoTooManyAboard".Translate(slots, counted);
+                    }
+                }
+                int required = CargoPolicy.RequiredColonistCount(shuttle);
+                if (required > 0)
+                {
+                    int aboard = CargoPolicy.ColonistsAboard(shuttle);
+                    if (aboard < required)
+                    {
+                        return "ShuttleCargoNoRequiredColonists".Translate(required, aboard);
+                    }
                 }
             }
             if (!shuttle.AllRequiredThingsLoaded)
@@ -280,7 +314,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 if (sendAwayMethod == null)
                 {
                     sendAwayLookupFailed = true;
-                    Log.Error("[帝国穿梭机可装载机械族与食尸鬼] 找不到 ShipJob_Wait.SendAway，任务穿梭机的「起飞」按钮不可用。游戏更新后方法改名时会出现此提示。");
+                    Log.Error("[更好的“帝国穿梭机”] 找不到 ShipJob_Wait.SendAway，任务穿梭机的「起飞」按钮不可用。游戏更新后方法改名时会出现此提示。");
                     return;
                 }
             }
@@ -291,7 +325,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             }
             catch (Exception ex)
             {
-                Log.Error("[帝国穿梭机可装载机械族与食尸鬼] 执行起飞时出错：" + ex);
+                Log.Error("[更好的“帝国穿梭机”] 执行起飞时出错：" + ex);
             }
             finally
             {

@@ -21,6 +21,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 做法：只在「原版这次一定会因为人数超上限而拒绝」时，把名单收窄成「设置里算作占名额的那些单位」，
     ///   再交给原方法。这样原方法自己的比较就只统计该统计的人。
     ///
+    /// 总开关（CargoPolicy.LimitEnforced）关闭时整段不执行：界面按原版口径计数，本模组不干预。
+    ///
     /// 为什么加「原版一定会拒绝」这个前提：
     ///   收窄名单同时也让原方法后面的可达性检查少看几眼（它遍历的正是这份名单）。
     ///   若人数没超上限就不收窄，可达性检查仍覆盖全部勾选单位，行为与原版完全一致；
@@ -32,6 +34,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 2. 参数被换成新列表后，调用方 TryAccept 会把这份名单继续转交给 MakeLordsAsAppropriate；
     ///    装载领主那处补丁刻意不读这个参数，只读 leftToLoad，因此随行单位不会因为这里被收窄而漏掉。
     /// 3. transporters 是界面的私有字段，原版没有公开入口，只能反射取用；字段一旦改名就整段跳过，退化为原版行为。
+    /// 4. 只对「玩家殖民者远征」的任务穿梭机生效（CargoPolicy.IsPlayerExpeditionShuttle）；
+    ///    款待任务那类接送暂住客人的穿梭机连界面都不归本模组管。
     /// </summary>
     [HarmonyPatch(typeof(Dialog_LoadTransporters), "CheckForErrors")]
     internal static class Patch_CheckForErrors
@@ -43,6 +47,10 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         private static void Prefix(Dialog_LoadTransporters __instance, ref List<Pawn> pawns)
         {
             if (pawns == null || pawns.Count == 0)
+            {
+                return;
+            }
+            if (!CargoPolicy.LimitEnforced)
             {
                 return;
             }
@@ -82,7 +90,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             pawns = narrowed;
         }
 
-        /// <summary>取本次装载的穿梭机；不是单台成组的任务穿梭机时返回 null。</summary>
+        /// <summary>取本次装载的穿梭机；不是单台成组的玩家远征用任务穿梭机时返回 null。</summary>
         private static CompShuttle ShuttleOf(Dialog_LoadTransporters dialog)
         {
             if (!fieldLookupDone)
@@ -101,7 +109,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 return null;
             }
             CompShuttle shuttle = transporter.parent.TryGetComp<CompShuttle>();
-            return CargoPolicy.IsQuestShuttle(shuttle) ? shuttle : null;
+            return CargoPolicy.IsPlayerExpeditionShuttle(shuttle) ? shuttle : null;
         }
     }
 
@@ -114,16 +122,29 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     ///     -> IsAllowedNow：先问 IsAllowed（能不能上机），再看 maxColonistCount（最多几个人）
     ///        -> 数出「机舱里已有的殖民者」与「全图上正排队进这台穿梭机的单位」，达到上限就返回 false，
     ///           菜单项显示成灰色的「不允许」。
+    ///   抱着单位走到穿梭机旁（FloatMenuOptionProvider）也走同一个判定。
     ///
-    /// 与原版的差别只在原版要拒绝的时候：原版数人数时，机舱里只认殖民者，但排队进舱的单位不看类别，
-    ///   于是随行的机械族、亚人、奴隶、囚犯只要在排队，就都会挤占这个上限。
-    ///   本补丁在原版已经因为上限返回 false 时，按设置重数一遍：设置里「不计入」的类别整类跳过。
+    /// 原版为什么形同无物：多数任务只给穿梭机设 requiredColonistCount（点名要带几名殖民者），
+    ///   而 maxColonistCount 留空为 -1，IsAllowedNow 开头就因此直接返回 true——
+    ///   于是装载界面会拦住「只允许 N 名殖民者」，右键却可以一个接一个往机舱里塞，
+    ///   人数上限在右键这条路上完全失效。
+    ///
+    /// 做法：原版的结果只用 maxColonistCount 作比较；本补丁改成统一按 CargoPolicy.BoardingLimit 比较
+    ///   （任务名额与「任务要求的人数」里较大的那个），并且：
+    ///     - 不占名额的类别（默认设置下的机械族与亚人）直接放行——它们进舱不改变既有人数，
+    ///       任务要的殖民者一装满就把随行单位挡在机舱外，正是本模组要避免的；
+    ///     - 占名额的单位按「机舱里已有的 + 全图上正走过来的」一起算，与原版的口径一致，只是跳过两类：
+    ///       不计入的类别，以及不属于玩家这一边的单位（任务自带的帝国乘客，见 CargoPolicy.BelongsToPlayerSide）；
+    ///     - 要上机的单位本身如果就是任务自带的乘客，名额一概不管，原版判什么就是什么；
+    ///     - 物品不重算，原版怎么判就怎么判。
     ///
     /// 注意：
-    /// 1. 只在原版返回 false、且 IsAllowed 说「能上机」时才改写结果——也就是说拒绝的原因确实是人数。
-    ///    其它任何拒绝理由都原样保留。
-    /// 2. 设置里四类全都「计入」时不介入，此时重数的结果与原版一致，没有副作用。
-    /// 3. 只对任务穿梭机生效；许可穿梭机与玩家自有穿梭机的 maxColonistCount 为 -1，本来就会提前返回。
+    /// 1. 只在 IsAllowed 说「能上机」时才改写结果：健康、阵营、类别这些拒绝理由一律原样保留。
+    /// 2. 任务没给这台穿梭机设名额、也没有点名要带人数（上限为 0）时完全不介入，退回原版；
+    ///    设置里关掉「任务穿梭机的人数限制」时同样完全不介入。
+    /// 3. 只对「玩家殖民者远征」的任务穿梭机生效（CargoPolicy.IsPlayerExpeditionShuttle）；
+    ///    许可穿梭机与玩家自有穿梭机的 maxColonistCount 为 -1 本来就会提前返回，
+    ///    款待任务那类接送暂住客人的穿梭机则整类不在范围内。
     /// </summary>
     [HarmonyPatch(typeof(CompShuttle), nameof(CompShuttle.IsAllowedNow))]
     internal static class Patch_CompShuttle_IsAllowedNow
@@ -131,15 +152,12 @@ namespace ImperialShuttleLoadsMechsAndGhouls
         [HarmonyPostfix]
         private static void Postfix(CompShuttle __instance, Thing t, ref bool __result)
         {
-            if (__result)
+            if (__instance?.parent == null || !CargoPolicy.IsPlayerExpeditionShuttle(__instance))
             {
                 return;
             }
-            if (__instance?.parent == null || __instance.maxColonistCount <= 0)
-            {
-                return;
-            }
-            if (!CargoPolicy.IsQuestShuttle(__instance) || !CargoPolicy.AnyCategoryLeftOutOfLimit())
+            int slots = CargoPolicy.BoardingLimit(__instance);
+            if (slots <= 0)
             {
                 return;
             }
@@ -147,71 +165,24 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 return;
             }
-            __result = CountTowardLimit(__instance, t) < __instance.maxColonistCount;
-        }
-
-        /// <summary>
-        /// 照原版 IsAllowedNow 的中段重数一遍人数，唯一差别是跳过设置里「不计入」的类别。
-        ///
-        /// 原版口径：机舱里只数殖民者（物品另外算），全图上任何排队或正在执行「进入穿梭机」的单位都数，
-        /// 且同一单位有多条排队就算多条——这里逐条对齐，避免与其它 mod 的预期打架。
-        /// </summary>
-        private static int CountTowardLimit(CompShuttle shuttle, Thing excluded)
-        {
-            int num = 0;
-            ThingOwner container = shuttle.Transporter?.innerContainer;
-            if (container != null)
+            if (!(t is Pawn boarding))
             {
-                for (int i = 0; i < container.Count; i++)
-                {
-                    if (container[i] == excluded)
-                    {
-                        continue;
-                    }
-                    if (container[i] is Pawn contained && contained.IsColonist && CargoPolicy.CountsTowardShuttleLimit(contained))
-                    {
-                        num++;
-                    }
-                }
+                // 只对「单位」重算名额；其它东西（物品、尸体等）保持原版判定，免得名额把它们一起挡在门外。
+                return;
             }
-            Map map = shuttle.parent.Map;
-            if (map == null)
+            if (!CargoPolicy.CountsTowardShuttleLimit(boarding))
             {
-                return num;
+                // 要上机的单位本身不占名额（默认设置下的机械族与亚人）：它能进舱并不改变占名额的人数，
+                // 因此不论机舱里已计入上限的人有多少，上限都不该拦它。
+                __result = true;
+                return;
             }
-            List<Pawn> allPawns = map.mapPawns.AllPawns;
-            for (int i = 0; i < allPawns.Count; i++)
+            if (!CargoPolicy.BelongsToPlayerSide(boarding))
             {
-                Pawn pawn = allPawns[i];
-                if (pawn == excluded || pawn.jobs == null || pawn.jobs.curDriver == null)
-                {
-                    continue;
-                }
-                if (!CargoPolicy.CountsTowardShuttleLimit(pawn))
-                {
-                    continue;
-                }
-                JobQueue queue = pawn.jobs.jobQueue;
-                for (int j = 0; j < queue.Count; j++)
-                {
-                    if (IsEnteringShuttle(queue[j].job, shuttle.parent))
-                    {
-                        num++;
-                    }
-                }
-                if (IsEnteringShuttle(pawn.jobs.curJob, shuttle.parent))
-                {
-                    num++;
-                }
+                // 任务自带的乘客（帝国使团、押送人员）不算在玩家这边，名额一概不管他们，原版怎么判就怎么判。
+                return;
             }
-            return num;
-        }
-
-        private static bool IsEnteringShuttle(Job job, Thing shuttle)
-        {
-            return job != null
-                && typeof(JobDriver_EnterTransporter).IsAssignableFrom(job.def.driverClass)
-                && job.GetTarget(TargetIndex.A).Thing == shuttle;
+            __result = CargoPolicy.QuotaAboard(__instance, t) + CargoPolicy.CountEnteringQuotaPawns(__instance.parent, t) < slots;
         }
     }
 }

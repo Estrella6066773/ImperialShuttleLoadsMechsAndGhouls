@@ -29,7 +29,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 1. 原版在同一方法里会先把自己名单之外的单位踢出领主，而机械族与亚人恰好不在原版名单里，
     ///    所以每一轮本补丁都会「先被踢、再加回」。影响仅限于重复点确定时会打断一次走路，不会丢失指派。
     /// 2. 加回领主时照抄原版的三步：先把单位从原领主摘除，再 AddPawn，最后打断当前工作让它立刻接受新职责。
-    /// 3. 本补丁只管任务穿梭机；许可穿梭机与玩家自有穿梭机保持原样。
+    /// 3. 只认「玩家殖民者远征」的任务穿梭机（CargoPolicy.IsPlayerExpeditionShuttle）；
+    ///    许可穿梭机、玩家自有穿梭机，以及来接走暂住客人的款待类穿梭机一律保持原样。
     /// </summary>
     [HarmonyPatch(typeof(TransporterUtility), nameof(TransporterUtility.MakeLordsAsAppropriate))]
     internal static class Patch_MakeLordsAsAppropriate
@@ -44,7 +45,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
                 return;
             }
             CompShuttle shuttle = transporters[0].parent.TryGetComp<CompShuttle>();
-            if (!CargoPolicy.IsQuestShuttle(shuttle))
+            if (!CargoPolicy.IsPlayerExpeditionShuttle(shuttle))
             {
                 return;
             }

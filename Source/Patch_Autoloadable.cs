@@ -21,7 +21,8 @@ namespace ImperialShuttleLoadsMechsAndGhouls
     /// 相当于把「多出来的机械族与亚人」从这道判断题里摘出去，让开关的可见性与原版保持一致。
     ///
     /// 注意：
-    /// 1. 只在任务穿梭机上重算；玩家自有穿梭机的 Autoloadable 原本就因 IsPlayerShuttle 为 false，保持不动。
+    /// 1. 只在「玩家殖民者远征」的任务穿梭机上重算（CargoPolicy.IsPlayerExpeditionShuttle）；
+    ///    许可穿梭机、玩家自有穿梭机，以及款待任务那类接送客人的穿梭机一律保持不动。
     /// 2. 重算完全复用原版方法（AllSendablePawns / AllSendableItems / IsRequired），不自己解释什么是「被要求的」。
     /// 3. 自动装载一旦开启，原版会清空并重写 leftToLoad，只保留任务要求的物品，
     ///    此时玩家手动勾的机械族与亚人会被原版清掉——这是原版自动装载本身的行为，本模组不介入。
@@ -38,7 +39,7 @@ namespace ImperialShuttleLoadsMechsAndGhouls
             {
                 return;
             }
-            if (!CargoPolicy.IsQuestShuttle(__instance))
+            if (!CargoPolicy.IsPlayerExpeditionShuttle(__instance))
             {
                 return;
             }
